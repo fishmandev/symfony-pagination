@@ -2,6 +2,9 @@
 
 namespace AppBundle\Repository;
 
+use Doctrine\ORM\Query;
+use Doctrine\ORM\Tools\Pagination\Paginator;
+
 /**
  * UserRepository
  *
@@ -10,4 +13,41 @@ namespace AppBundle\Repository;
  */
 class UserRepository extends \Doctrine\ORM\EntityRepository
 {
+    /**
+     * @param int $page
+     * @param int $limit
+     * @return array
+     */
+    public function getUserList($page = 1, $limit = 5)
+    {
+        $query = $this->createQueryBuilder('u')
+            ->getQuery()->setHydrationMode(Query::HYDRATE_ARRAY);
+        $paginator = $this->paginate($query, $page, $limit);
+
+        return $paginator;
+    }
+
+    /**
+     * @param $dql
+     * @param $page
+     * @param $limit
+     * @return array
+     */
+    protected function paginate($dql, $page, $limit)
+    {
+        $paginator = new Paginator($dql);
+        $paginator->getQuery()
+            ->setFirstResult($limit * ($page - 1)) // Offset
+            ->setMaxResults($limit); // Limit
+
+        return [
+            'pagination' => [
+                'current_page' => (int)$page,
+                'per_page' => $paginator->getIterator()->count(),
+                'last_page' => ceil($paginator->count() / $limit),
+                'total' => $paginator->count()
+            ],
+            'items' => $paginator->getIterator()->getArrayCopy()
+        ];
+    }
 }
